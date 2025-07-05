@@ -1,0 +1,7 @@
+services:
+  agent:
+    # Build the Docker image from the Dockerfile in the current directory
+    build: .
+    # Mount the .env file to provide API keys to the container
+    env_file:
+      - .env

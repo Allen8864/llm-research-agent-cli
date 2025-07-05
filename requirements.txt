@@ -1,0 +1,11 @@
+langchain
+langgraph
+langchain-openai
+langchain-google-genai
+pydantic
+httpx
+python-dotenv
+pytest
+pytest-mock
+pytest-asyncio
+langchain-tavily
