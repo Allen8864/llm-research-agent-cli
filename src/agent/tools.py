@@ -4,11 +4,15 @@ import asyncio
 from typing import List, Dict, Any
 
 from langchain_tavily import TavilySearch
+from .logger import get_logger
+
+# Get the logger
+logger = get_logger()
 
 # A simple mock tool for offline development and testing
 async def mock_web_search(query: str) -> List[Dict[str, str]]:
     """A mock web search function that returns dummy results."""
-    print(f"--- Mock Searching for: {query} ---")
+    logger.info(f"--- Mock Searching for: {query} ---")
     await asyncio.sleep(1) # Simulate network latency
     return []
 
@@ -16,7 +20,7 @@ async def tavily_web_search(query: str) -> List[Dict[str, str]]:
     """Performs a web search using the Tavily Search API."""
     api_key = os.getenv("TAVILY_API_KEY")
     if not api_key:
-        print("TAVILY_API_KEY is not set. Falling back to mock search.")
+        logger.info("TAVILY_API_KEY is not set. Falling back to mock search.")
         return []
 
     # TavilySearchResults automatically picks up TAVILY_API_KEY from environment
@@ -40,7 +44,7 @@ async def tavily_web_search(query: str) -> List[Dict[str, str]]:
             })
         return parsed_results
     except Exception as e:
-        print(f"An error occurred during Tavily search: {e}")
+        logger.error(f"An error occurred during Tavily search: {e}")
         return []
 
 class WebSearchTool:
@@ -56,10 +60,10 @@ class WebSearchTool:
         search_func = None
         if os.getenv("TAVILY_API_KEY"):
             search_func = tavily_web_search
-            print("--- Using Tavily Search ---")
+            logger.info("--- Using Tavily Search ---")
         else:
             search_func = mock_web_search
-            print("--- Using Mock Search ---")
+            logger.info("--- Using Mock Search ---")
         
         tasks = [search_func(q) for q in queries]
         results_lists = await asyncio.gather(*tasks, return_exceptions=True)

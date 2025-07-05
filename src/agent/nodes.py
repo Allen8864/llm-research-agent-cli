@@ -14,6 +14,10 @@ from langchain_core.runnables.base import Runnable
 
 from .state import GraphState
 from .tools import WebSearchTool
+from .logger import get_logger
+
+# Get the logger
+logger = get_logger()
 
 # --- Pydantic Models for LLM Outputs ---
 
@@ -45,18 +49,17 @@ class SynthesizeOutput(BaseModel):
 
 def get_llm():
     """Initializes and returns the appropriate LLM based on available API keys."""
-    # Explicitly load .env from the project root
-    dotenv_path = Path(__file__).resolve().parents[2] / '.env'
-    load_dotenv(dotenv_path=dotenv_path)
+    # Load .env file from the project root
+    load_dotenv(find_dotenv())
     
     google_api_key = os.getenv("GOOGLE_API_KEY")
     openai_api_key = os.getenv("OPENAI_API_KEY")
     
     if google_api_key:
-        print("--- Using Google Generative AI ---")
+        logger.info("--- Using Google Generative AI ---")
         return ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
     elif openai_api_key:
-        print("--- Using OpenAI ---")
+        logger.info("--- Using OpenAI ---")
         return ChatOpenAI(temperature=0)
     else:
         raise ValueError("No LLM API key found. Please set either GOOGLE_API_KEY or OPENAI_API_KEY.")
@@ -75,7 +78,7 @@ def log_error(step: str, error_type: str, message: str) -> dict:
 
 def generate_queries_node(state: GraphState) -> dict:
     """Generates initial search queries based on the user's question."""
-    print("--- Node: Generate Queries ---")
+    logger.info("--- Node: Generate Queries ---")
     question = state["question"]
 
     prompt = ChatPromptTemplate.from_messages([
@@ -97,7 +100,7 @@ def generate_queries_node(state: GraphState) -> dict:
 
 def web_search_node(state: GraphState) -> dict:
     """Performs web searches for the given queries and updates the documents in the state."""
-    print("--- Node: Web Search ---")
+    logger.info("--- Node: Web Search ---")
     queries = state["queries"]
     
     search_tool = WebSearchTool()
@@ -118,7 +121,7 @@ def web_search_node(state: GraphState) -> dict:
 
 def reflect_node(state: GraphState) -> dict:
     """Reflects on the gathered information and decides if more searching is needed."""
-    print("--- Node: Reflect ---")
+    logger.info("--- Node: Reflect ---")
     question = state["question"]
     documents = state["documents"]
 
@@ -135,12 +138,12 @@ def reflect_node(state: GraphState) -> dict:
     
     result = chain.invoke({})
     
-    print(f"Reflection: Need more info? {result.need_more}")
+    logger.info(f"Reflection: Need more info? {result.need_more}")
     return {"need_more": result.need_more, "queries": result.new_queries or [], "loop_count": state.get("loop_count", 0) + 1}
 
 def synthesize_node(state: GraphState) -> dict:
     """Synthesizes the final answer from the gathered documents."""
-    print("--- Node: Synthesize ---")
+    logger.info("--- Node: Synthesize ---")
     question = state["question"]
     documents = state["documents"]
 
@@ -149,15 +152,6 @@ def synthesize_node(state: GraphState) -> dict:
 
     if not documents:
         return {"final_answer": "No information found.", "citations": []}
-
-    # Check for error documents first
-    for doc in documents:
-        if doc.get('title') == "Search API Rate Limit Exceeded":
-            error_message = "I'm unable to provide a complete answer at this time because the search API rate limit has been exceeded. Please try again later."
-            return {"final_answer": error_message, "citations": []}
-        elif doc.get('title') == "Search Error":
-            error_message = f"I encountered an error while searching for information: {doc.get('content', 'Unknown error')}. Please try again later."
-            return {"final_answer": error_message, "citations": []}
 
     # Prepare documents for the prompt with their original IDs
     doc_for_llm_prompt = []
@@ -202,11 +196,13 @@ def synthesize_node(state: GraphState) -> dict:
             seen_urls.add(doc['url'])
             original_to_new_id_map[original_id] = new_id
     
-    # Now, use the mapping to create the citation string with new sequential IDs
+    # Use the mapping to create the citation string with new sequential IDs
     if cited_original_ids_from_llm:
         citation_string_at_end = "".join([f"[{original_to_new_id_map.get(_id, _id)}]" for _id in cited_original_ids_from_llm])
 
     # Combine answer and citations at the end
     full_answer = f"{final_answer_text}{citation_string_at_end}".strip()
+    output = {"final_answer": full_answer, "citations": final_citations_list}
+    logger.info(f"Final output: {output}")
 
-    return {"final_answer": full_answer, "citations": final_citations_list}
+    return output

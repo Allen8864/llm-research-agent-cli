@@ -6,6 +6,10 @@ from .nodes import (
     reflect_node,
     synthesize_node,
 )
+from .logger import get_logger
+
+# Get the logger
+logger = get_logger()
 
 def state_has_error(state: GraphState) -> bool:
     return bool(state.get("errors", []))
@@ -13,22 +17,22 @@ def state_has_error(state: GraphState) -> bool:
 
 def should_continue_after_generate(state: GraphState) -> str:
     if state_has_error(state):
-        print("--- [generate] Error detected ---")
+        logger.info("--- [generate] Error detected ---")
         return "end_step"
     return "next_step"
 
 def should_continue_after_search(state: GraphState) -> str:
     if state_has_error(state) or not state.get("documents"):
-        print("--- [search] Error or empty documents ---")
+        logger.info("--- [search] Error or empty documents ---")
         return "end_step"
     return "next_step"
 
 def should_continue_after_reflect(state: GraphState) -> str:
     if state_has_error(state):
-        print("--- [reflect] Error detected ---")
+        logger.info("--- [reflect] Error detected ---")
         return "end_step"
     if state["need_more"] and state["loop_count"] < state["max_iter"]:
-        print("--- [reflect] Need more, loop ---")
+        logger.info("--- [reflect] Need more, loop ---")
         return "next_step"
     return "end_step"
 

@@ -2,8 +2,6 @@
 
 This project is a command-line research agent built with Python, LangChain, and LangGraph. It takes a user's question, performs web searches, reflects on the results, and synthesizes a concise answer with citations.
 
-This project was built to satisfy the requirements of the take-home assignment described in `../Interview coding question.pdf`.
-
 ---
 
 ## Architecture
@@ -92,9 +90,6 @@ docker compose run --rm agent "Who won the 2022 FIFA World Cup?"
 
 To ensure everything is working as expected, you can run the test suite. The tests are designed to run offline using mocks.
 
-First, build the image, then override the entrypoint to run `pytest`.
-
 ```bash
-docker compose build
-docker compose run --rm --entrypoint "pytest -q" agent
+pytest -q
 ```

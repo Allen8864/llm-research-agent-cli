@@ -39,7 +39,6 @@ def run_agent():
         print(json.dumps(output, indent=2))
 
     except Exception as e:
-        print(f"An error occurred during agent execution: {e}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":
